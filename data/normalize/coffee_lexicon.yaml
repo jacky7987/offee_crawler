@@ -1,0 +1,52 @@
+process:
+  水洗（Washed）:
+    aliases: ["水洗", "水洗處理", "washed", "washed process"]
+    regex: []
+  日曬（Natural）:
+    aliases: ["日曬", "自然日曬", "natural", "sun dried", "sun-dried", "natural process"]
+    regex: []
+  蜜處理（Honey）:
+    aliases: ["蜜處理", "黑蜜", "紅蜜", "黃蜜", "白蜜", "honey"]
+    regex: []
+  溼剝法（Wet Hulled）:
+    aliases: ["溼剝", "濕剝", "濕刨", "濕剝法", "giling basah", "wet-hulled", "wet hulled"]
+    regex: []
+  厭氧（Anaerobic）:
+    aliases: ["厭氧", "雙重厭氧", "二段厭氧", "酵母厭氧", "酵素厭氧", "anaerobic"]
+    regex:
+      - "厭氧.*"   # 只要含「厭氧」後面再接什麼都歸厭氧
+  創新處理法（Experiment）:
+    aliases: ["創新處理", "碳浸漬", "碳酸浸漬", "酒香", "乳酸發酵", "熱發酵", "冷發酵", "inoculated", "carbonic maceration"]
+    regex: []
+
+variety:
+  卡度拉（Caturra）:
+    aliases: ["卡度拉", "卡杜拉", "caturra"]
+  波旁（Bourbon）:
+    aliases: ["波旁", "紅波旁", "bourbon"]
+  黃波旁（Yellow Bourbon）:
+    aliases: ["黃波旁", "yellow bourbon", "yb", "yellow-bourbon", "bourbon amarillo"]
+  新世界（Mundo Novo）:
+    aliases: ["新世界", "蒙多諾沃", "mundo novo", "mondo novo"]
+  藝伎（Geisha）:
+    aliases: ["藝伎", "藝妓", "gesha", "geisha"]
+  卡度艾（Catuai）:
+    aliases: ["紅卡度艾", "卡杜艾", "卡度艾", "catuai", "catuaí"]
+  SL28:
+    aliases: ["sl28", "sl 28"]
+  SL34:
+    aliases: ["sl34", "sl 34"]
+  古優原生種（Heirloom）:
+    aliases: ["heirloom", "ethiopian heirloom", "古優", "原生種"]
+
+roast:
+  淺焙（Light）:
+    aliases: ["淺焙", "淺烘焙", "light"]
+  淺中焙（Light-medium）:
+    aliases: ["淺中", "淺中焙", "light-medium", "light medium"]
+  中焙（Medium）:
+    aliases: ["中焙", "中烘焙", "medium"]
+  中深焙（Medium-dark）:
+    aliases: ["中深", "中深焙", "medium-dark", "medium dark"]
+  深焙（Dark）:
+    aliases: ["深焙", "深烘焙", "dark"]
