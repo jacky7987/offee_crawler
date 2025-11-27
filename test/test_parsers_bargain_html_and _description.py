@@ -43,3 +43,13 @@ def test_bargain_parser_can_extract_desc_fields():
     # 如果你知道這支商品真的有寫「咖啡烘焙度：淺中」
     # 就可以再加一條比較嚴的：
     # assert desc_data["roast_raw"] in ("淺中", "淺中焙")
+
+
+def test_bargain_parser_detects_blend_by_region():
+    project_root = Path(__file__).resolve().parents[1]
+    html_file = project_root / "data" / "raw_html" / "bargain-cafe--best--coffee-bean-roaster-coffee-sister-costa-rica-brasil-454g.html"
+    lex_file = project_root / "data" / "normalize" / "coffee_lexicon.yaml"
+
+    product = parse_product_bargain(html_file, lex_file)
+
+    assert product["bean_type"] == "配方（Blend）"

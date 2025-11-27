@@ -4,7 +4,7 @@ from parse_product import parse_product
 def test_parse_bargain_product():
     # 準備：拿你剛剛存好的 html
     project_root = Path(__file__).resolve().parents[1]
-    html_file = project_root / "data" / "raw_html" / "colombia-sweet-realm-coffee-bean.html"
+    html_file = project_root / "data" / "raw_html" / "red-cherry-romance-pomelo-jin-xuan-coffee-beans-400g.html"
     lex_file = project_root / "data" / "normalize" / "coffee_lexicon.yaml"
 
     result = parse_product(source="bargain", html_path=html_file, lex_yaml_path=lex_file)

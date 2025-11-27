@@ -20,6 +20,11 @@ def test_roast():
 
 def test_variety_mixed():
     l = lex()
-    got = l.normalize_variety("卡度拉 caturra / 黃波旁 Yellow Bourbon")
+    got = l.normalize_variety("古優種（ Heirloom）",)
     print(got)
-    assert set[Any](got) == {"黃波旁（Yellow Bourbon）", "卡度拉（Caturra）"}
+    assert set[Any](got) == {"古優原生種（Heirloom）"}
+
+def test_country():
+    l = lex()
+    assert l.normalize_country("Colombia") == "哥倫比亞（Colombia）"
+    assert l.normalize_country("哥斯大黎加") == "哥斯大黎加（Costa Rica）"
