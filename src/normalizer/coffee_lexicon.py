@@ -14,6 +14,7 @@ class CoffeeLexicon:
         self.process = self._prep_category(data.get("process", {}))
         self.variety = self._prep_category(data.get("variety", {}))
         self.roast = self._prep_category(data.get("roast", {}))
+        self.country = self._prep_category(data.get("country", {}))
 
     # ===== helpers =====
     @staticmethod
@@ -37,7 +38,7 @@ class CoffeeLexicon:
         text = self._to_halfwidth(raw).strip()
 
         # 1) 大分隔符統一換成逗號
-        seps = ["/", "、", "，", ",", "│", "|"]
+        seps = ["/", "、", "，", ",", "│", "|", "（", "）", "(", ")"]
         for sep in seps:
             text = text.replace(sep, ",")
 
@@ -168,3 +169,6 @@ class CoffeeLexicon:
 
     def normalize_roast(self, raw:str)->str:
         return self._match(raw, self.roast)
+
+    def normalize_country(self, raw:str)->str:
+        return self._match(raw, self.country)

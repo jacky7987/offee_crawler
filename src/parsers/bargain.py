@@ -351,11 +351,34 @@ def parse_kv_from_desc(text: str) -> dict:
     return result
 
 def normalize_product_desciprtion(desc_raw:dict, lex:CoffeeLexicon) -> dict:
+    norm_country = lex.normalize_country(desc_raw.get("origin_raw"))
+    if not norm_country:
+        # 嘗試從產區找國家
+        region_raw = desc_raw.get("region_raw")
+        if region_raw:
+            # 1. 先試試看標準的 normalize (通常是完全比對)
+            found = lex.normalize_country(region_raw)
+            
+            # 2. 如果沒找到，試著用 partial match (檢查 alias 是否在字串中)
+            if not found:
+                # 借用 lex 的 _canon 來做標準化，確保比對一致
+                t = lex._canon(region_raw)
+                for code, spec in lex.country.items():
+                    for alias in spec["aliases"]:
+                        if alias in t:
+                            found = code
+                            break
+                    if found:
+                        break
+
+            if found:
+                norm_country = found
+
     return {
         "process" : lex.normalize_process(desc_raw.get("process_raw")),
         "roast" : lex.normalize_roast(desc_raw.get("roast_raw")),
         "variety" : lex.normalize_variety(desc_raw.get("variety_raw")),
-        "country": lex.normalize_country(desc_raw.get("origin_raw")),
+        "country": norm_country,
     }
 
 

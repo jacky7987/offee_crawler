@@ -2,7 +2,7 @@ from pathlib import Path
 import requests
 
 
-def fetch_page(url: str) -> Path:
+def fetch_page(url: str, save_html:bool=False) -> Path:
     """Fetch a page from the given URL and save it to the given directory.
 
     Args:
@@ -23,6 +23,9 @@ def fetch_page(url: str) -> Path:
     # check if the request was successful
     resp.raise_for_status()
 
+    if not save_html:
+        return resp.text
+
     # create the output directory if it doesn't exist
     script_dir = Path(__file__).resolve().parent
     project_root = script_dir.parent
@@ -39,11 +42,3 @@ def fetch_page(url: str) -> Path:
     file_path.write_text(resp.text, encoding="utf-8")
 
     return file_path
-
-
-if __name__ == "__main__":
-    # 小測試：抓一頁商品
-    test_url = "https://www.bargain-cafe.com/products/colombia-sweet-realm-coffee-bean"
-
-    file_path = fetch_page(test_url)
-    print(f"Page saved to {file_path}")

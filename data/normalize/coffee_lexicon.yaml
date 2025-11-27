@@ -16,7 +16,7 @@ process:
     regex:
       - "厭氧.*"   # 只要含「厭氧」後面再接什麼都歸厭氧
   創新處理法（Experiment）:
-    aliases: ["創新處理", "碳浸漬", "碳酸浸漬", "酒香", "乳酸發酵", "熱發酵", "冷發酵", "inoculated", "carbonic maceration"]
+    aliases: ["創新處理", "碳浸漬", "碳酸浸漬", "酒香", "乳酸發酵", "熱發酵", "冷發酵", "inoculated", "carbonic maceration", "酵素水洗"]
     regex: []
 
 variety:
@@ -29,7 +29,7 @@ variety:
   新世界（Mundo Novo）:
     aliases: ["新世界", "蒙多諾沃", "mundo novo", "mondo novo"]
   藝伎（Geisha）:
-    aliases: ["藝伎", "藝妓", "gesha", "geisha"]
+    aliases: ["藝伎", "藝妓", "gesha", "geisha", "寶貝藝伎", "baby geisha", "baby gesha"]
   卡度艾（Catuai）:
     aliases: ["紅卡度艾", "卡杜艾", "卡度艾", "catuai", "catuaí"]
   SL28:
@@ -37,11 +37,39 @@ variety:
   SL34:
     aliases: ["sl34", "sl 34"]
   古優原生種（Heirloom）:
-    aliases: ["heirloom", "ethiopian heirloom", "古優", "原生種"]
+    aliases: ["heirloom", "ethiopian heirloom", "古優", "原生種", "古優種", "Heirloom", "衣索比亞古優種"]
+  "74158":
+    aliases: ["74158"]
+  可如蜜（Kurume）:
+    aliases: ["可如蜜", "kurume", "Kurume"]
+  哥倫比亞種（Colombia）:
+    aliases: ["哥倫比亞", "Colombia", "colombia"]
+  卡斯提優（Castillo）:
+    aliases: ["卡斯提優", "Castillo", "castillo"]
+
+country:
+  哥倫比亞（Colombia）:
+    aliases: ["哥倫比亞", "colombia"]
+  哥斯大黎加（Costa Rica）:
+    aliases: ["哥斯大黎加", "哥斯達黎加", "costa rica", "costarica"]
+  衣索比亞（Ethiopia）:
+    aliases: ["衣索比亞", "ethiopia", "ethiopian"]
+  尼加拉瓜（Nicaragua）:
+    aliases: ["尼加拉瓜", "nicaragua"]
+  巴西（Brazil）:
+    aliases: ["巴西", "brazil"]
+  台灣（Taiwan）:
+    aliases: ["台灣", "臺灣", "taiwan", "taipei", "taiwan, roc"]
+  瓜地馬拉（Guatemala）:
+    aliases: ["瓜地馬拉", "危地馬拉", "guatemala"]
+  肯亞（Kenya）:
+    aliases: ["肯亞", "肯尼亞", "kenya"]
+  巴拿馬（Panama）:
+    aliases: ["巴拿馬", "panama"]
 
 roast:
   淺焙（Light）:
-    aliases: ["淺焙", "淺烘焙", "light"]
+    aliases: ["淺焙", "淺烘焙", "light", "淺"]
   淺中焙（Light-medium）:
     aliases: ["淺中", "淺中焙", "light-medium", "light medium"]
   中焙（Medium）:
