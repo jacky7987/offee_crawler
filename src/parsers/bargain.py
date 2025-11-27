@@ -351,28 +351,34 @@ def parse_kv_from_desc(text: str) -> dict:
     return result
 
 def normalize_product_desciprtion(desc_raw:dict, lex:CoffeeLexicon) -> dict:
-    norm_country = lex.normalize_country(desc_raw.get("origin_raw"))
-    if not norm_country:
-        # 嘗試從產區找國家
-        region_raw = desc_raw.get("region_raw")
-        if region_raw:
-            # 1. 先試試看標準的 normalize (通常是完全比對)
-            found = lex.normalize_country(region_raw)
-            
-            # 2. 如果沒找到，試著用 partial match (檢查 alias 是否在字串中)
-            if not found:
-                # 借用 lex 的 _canon 來做標準化，確保比對一致
-                t = lex._canon(region_raw)
+    def _collect_countries(text: str | None) -> list[str]:
+        """把可能含多個產國的文字逐一正規化並去重"""
+        if not text:
+            return []
+        parts = re.split(r"[、，,/&＋+和與及\\s]+", re.sub(r"[()（）]", " ", text))
+        countries: list[str] = []
+        seen = set()
+        for part in parts:
+            part = part.strip()
+            if not part:
+                continue
+            norm = lex.normalize_country(part)
+            if not norm:
+                t = lex._canon(part)
                 for code, spec in lex.country.items():
-                    for alias in spec["aliases"]:
-                        if alias in t:
-                            found = code
-                            break
-                    if found:
+                    if any(alias in t for alias in spec["aliases"]):
+                        norm = code
                         break
+            if norm and norm not in seen:
+                seen.add(norm)
+                countries.append(norm)
+        return countries
 
-            if found:
-                norm_country = found
+    countries = _collect_countries(desc_raw.get("origin_raw"))
+    if not countries:
+        countries = _collect_countries(desc_raw.get("region_raw"))
+
+    norm_country = ",".join(countries) if countries else None
 
     return {
         "process" : lex.normalize_process(desc_raw.get("process_raw")),
