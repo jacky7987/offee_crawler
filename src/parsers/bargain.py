@@ -28,15 +28,43 @@ def extract_title(soup: BeautifulSoup) -> str:
     return None
 
 
-def extract_bean_type_from_title(title: str) -> str:
+BLEND_KEYWORDS = [
+    "配方",
+    "混合",
+    "混搭",
+    "調配",
+    "調和",
+    "blend",
+    "綜合",
+]
+
+
+def infer_bean_type(title: str | None, origin_text: str | None, region_text: str | None = None) -> str:
     """
-    Extract the bean type from the title.
+    判斷是否為配方豆。
     """
-    if "配方" in title:
+    title_text = (title or "").lower()
+    for kw in BLEND_KEYWORDS:
+        if kw.lower() in title_text:
+            return "配方（Blend）"
+
+    def _text_has_multiple_places(text: str | None) -> bool:
+        if not text:
+            return False
+        raw = re.sub(r"[()（）]", " ", text)
+        if re.search(r"[、，,/&＋+和與及]", raw):
+            parts = [p.strip() for p in re.split(r"[、，,/&＋+和與及]", raw) if p.strip()]
+            if len(parts) >= 2:
+                return True
+        return False
+
+    if _text_has_multiple_places(origin_text):
         return "配方（Blend）"
 
-    else:
-        return "單品（Single Origin）"
+    if _text_has_multiple_places(region_text):
+        return "配方（Blend）"
+
+    return "單品（Single Origin）"
 
 
 def extract_product_json(html_text) -> dict:
@@ -97,13 +125,15 @@ def extract_product_info(product_data: dict) -> dict:
             "price_original": None,
             "variation_desc": None,
             "in_stock": None,
+            "weight_g": None,
         }
 
     offer_list = []
     for v in variations:    
         # 1. 決定實際賣價（含特價）
-        if v.get("price_sale"):
-            price_final = v["price_sale"]["dollars"]  # e.g. 550.0
+        price_sale = v.get("price_sale")
+        if price_sale and price_sale.get("dollars"):
+            price_final = price_sale["dollars"]  # e.g. 550.0
         else:
             price_final = v["price"]["dollars"]       # e.g. 600.0
 
@@ -179,11 +209,88 @@ def extract_desc_from_full_html(html_text) -> str | None:
     '''
     soup = BeautifulSoup(html_text, "html.parser")
 
-    # 1) 這種 shopline 常常把描述包在一個 content 區
-    # 你可以先直接抓整個 body 的文字
-    main = soup.find(id="product-show") or soup  # 看實際頁面調
+    # 1) 優先抓商品描述區塊，否則退回整個 body
+    main = (
+        soup.select_one(".ProductDetail-description-content")
+        or soup.select_one(".ProductDetail-description")
+        or soup.find(id="product-show")
+        or soup
+    )
     text = main.get_text(separator="\n", strip=True)
 
+    return text
+
+
+_DESC_KEYWORDS = [
+    # 產地 / 產區
+    "咖啡烘焙度",
+    "處理方式",
+    "處理法",
+    "品種",
+    "國別",
+    "國家",
+    "產地",
+    "產區",
+    "地區",
+    "區域",
+    "海拔",
+    "處理廠",
+    "處理場",
+    "處理站",
+    "莊園",
+    "庄園",
+    "農場",
+    "農園",
+    "生產者",
+    "Producer",
+    "producer",
+    "Process",
+    "process",
+    "Variety",
+    "variety",
+    "Country",
+    "country",
+    "Origin",
+    "origin",
+    "Region",
+    "region",
+    "Farm",
+    "farm",
+    "Roast",
+    "roast",
+    "焙度",
+    "烘焙度",
+    "烘焙",
+]
+
+_DESC_KEY_PATTERN = re.compile(
+    "|".join(sorted({re.escape(k) for k in _DESC_KEYWORDS}, key=len, reverse=True))
+)
+
+
+def _normalize_desc_text(text: str) -> str:
+    text = text.replace("\r", "\n")
+    # unify common unicode spaces
+    text = text.replace("\xa0", " ").replace("\u3000", " ")
+    text = re.sub(r"(莊|庄)\s+(園)", r"\1\2", text)
+    # add newlines before repeated keys sitting on the same line
+    text = re.sub(
+        rf"(?<!^)(?<!\n)(?<![\w\u4e00-\u9fff])({_DESC_KEY_PATTERN.pattern})(?=[\s：:｜|│／/=－\-])",
+        r"\n\1",
+        text,
+    )
+    text = text.replace(":", "：")
+    # 處理「國家\n：衣索比亞」形式
+    text = re.sub(
+        rf"({_DESC_KEY_PATTERN.pattern})\s*\n\s*：",
+        r"\1：",
+        text,
+    )
+    text = re.sub(r"[｜|│／/=－\-]", "：", text)
+    # turn "國家 衣索比亞" into "國家：衣索比亞"
+    text = re.sub(rf"({_DESC_KEY_PATTERN.pattern})[ \t]+(?=[^\s：])", r"\1：", text)
+    text = re.sub(r"[ \t]*：[ \t]*", "：", text)
+    text = re.sub(r"\n+", "\n", text.strip())
     return text
 
 
@@ -191,24 +298,78 @@ def parse_kv_from_desc(text: str) -> dict:
     '''
     解析商品描述的 string，把標點符號切割，最後以 key: value 的形式轉換成 dict。
     '''
+    cleaned = _normalize_desc_text(text)
     result = {}
-    for line in text.splitlines():
-        line = line.strip()
+    pending_key = None
+    for raw_line in cleaned.splitlines():
+        line = raw_line.strip()
         if not line:
             continue
-        for sep in ["：", ":", "│", "|"]:
-            if sep in line:
-                key, val = line.split(sep, 1)
-                result[key.strip()] = val.strip()
-                break
+        if "：" not in line:
+            if pending_key:
+                if any(token in line for token in ("{{", "}}", "=>", "translate")):
+                    continue
+                addition = line.strip()
+                if addition:
+                    result[pending_key] = f"{result[pending_key]} {addition}".strip()
+                    opened = result[pending_key].count("（") + result[pending_key].count("(")
+                    closed = result[pending_key].count("）") + result[pending_key].count(")")
+                    if closed >= opened:
+                        pending_key = None
+            continue
+        key, val = line.split("：", 1)
+        key = key.strip()
+        val = val.strip()
+        if not key or not val:
+            continue
+        # 排除模板標記或是動態語系 placeholder
+        if "{{" in key or "{{" in val or "}}" in key or "}}" in val:
+            continue
+        if "=>" in key or "translate" in key or "=>" in val:
+            continue
+        # 特殊：生產者往往是「XX處理廠 + 小農」的形式，保留完整字串，並額外拆出處理廠
+        if key in {"生產者", "Producer", "producer"}:
+            parts = re.split(r"\s+", val)
+            producers = []
+            buffer = []
+            for part in parts:
+                buffer.append(part)
+                if part.endswith(("廠", "場", "站")):
+                    producers.append(" ".join(buffer).strip())
+                    buffer = []
+            if buffer:
+                producers.append(" ".join(buffer).strip())
+            if len(producers) >= 2:
+                result[key] = " ".join(producers)
+                result.setdefault("處理廠", producers[0])
+                continue
+        result[key] = val
+        if val.endswith(("（", "(")):
+            pending_key = key
+        else:
+            pending_key = None
     return result
 
 def normalize_product_desciprtion(desc_raw:dict, lex:CoffeeLexicon) -> dict:
     return {
         "process" : lex.normalize_process(desc_raw.get("process_raw")),
         "roast" : lex.normalize_roast(desc_raw.get("roast_raw")),
-        "variety" : lex.normalize_variety(desc_raw.get("variety_raw"))
+        "variety" : lex.normalize_variety(desc_raw.get("variety_raw")),
+        "country": lex.normalize_country(desc_raw.get("origin_raw")),
     }
+
+
+def _clean_origin_value(text: str | None) -> str | None:
+    if not text:
+        return None
+    cleaned = re.sub(r"\(.*?\)", " ", text)
+    cleaned = re.sub(r"[、，,/|&]+", " ", cleaned)
+    cleaned = cleaned.strip()
+    if not cleaned:
+        return None
+    # 取第一個片段
+    first = cleaned.split()[0]
+    return first.strip()
 
 
 def parse_product_description(html_text) -> dict:
@@ -230,13 +391,38 @@ def parse_product_description(html_text) -> dict:
 
     kv = parse_kv_from_desc(description)
 
+    def pick(*keys: str) -> str | None:
+        for key in keys:
+            val = kv.get(key)
+            if val:
+                return val
+        return None
+
+    origin_full_raw = pick("國家", "國別", "產地", "Country", "country", "Origin", "origin")
+    origin_raw = _clean_origin_value(origin_full_raw)
+
     result = {
-        "process_raw": kv.get("處理方式") or kv.get("處理法"),
-        "roast_raw": kv.get("咖啡烘焙度") or kv.get("烘焙度"),
-        "variety_raw": kv.get("品種"),
-        "origin_raw": kv.get("國家") or kv.get("產地"),
-        "region_raw": kv.get("產區"),
-        "farm_raw": kv.get("處理廠") or kv.get("莊園") or kv.get("農場"),
+        "process_raw": pick("處理方式", "處理法", "Process", "process"),
+        "roast_raw": pick("咖啡烘焙度", "烘焙度", "焙度", "烘焙", "Roast", "roast"),
+        "variety_raw": pick("品種", "Variety", "variety"),
+        "origin_raw": origin_raw,
+        "_origin_raw_full": origin_full_raw,
+        "region_raw": pick("產區", "地區", "區域", "Region", "region"),
+        "farm_raw": pick(
+            "莊園",
+            "庄園",
+            "農場",
+            "農園",
+            "Farm",
+            "farm",
+            "處理廠",
+            "處理場",
+            "處理站",
+            "產埋廠",
+            "生產者",
+            "Producer",
+            "producer",
+        ),
     }
 
     return result
@@ -263,8 +449,6 @@ def parse_product_bargain(html_path: Path, lex_yaml_path: Path) -> dict:
 
     # 3. 解析 title
     title = extract_title(soup)
-    # 3.1 解析 bean type
-    bean_type = extract_bean_type_from_title(title)
 
     # 4. 解析 product_data
     product_data = extract_product_json(html_text)
@@ -275,6 +459,10 @@ def parse_product_bargain(html_path: Path, lex_yaml_path: Path) -> dict:
 
     #6. 抽出 product_description_raw
     desc_raw = parse_product_description(html_text)
+    origin_raw_full = desc_raw.pop("_origin_raw_full", None)
+    # 3.1 解析 bean type
+    bean_type = infer_bean_type(title, origin_raw_full, desc_raw.get("region_raw"))
+
     #6.1 做正規化
 
     lex = CoffeeLexicon(lex_yaml_path)
